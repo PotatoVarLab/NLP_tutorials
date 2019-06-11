@@ -1,0 +1,65 @@
+
+# Docker 是在 Linux 上启用 TensorFlow GPU 支持的最简单方法
+    TensorFlow Docker 要求:
+        1. 在本地主机上安装 Docker。
+        2. 要在 Linux 上启用 GPU 支持，请安装 nvidia-docker
+    Notes: 
+        Configure Docker to start on boot
+            1. sudo systemctl enable docker
+        To disable this behavior, use disable instead.
+            2. sudo systemctl disable docker
+
+        To create the docker group and add your user:
+            1. Create the docker group.
+                sudo groupadd $group_name
+            2. Add your user to the docker group.
+                sudo usermod -aG $group_name $USER
+    ## 检测nvidia-docker
+    docker run --runtime=nvidia --rm nvidia/cuda:9.0-base nvidia-smi
+        +-----------------------------------------------------------------------------+
+        | NVIDIA-SMI 430.09       Driver Version: 430.09       CUDA Version: 10.1     |
+        |-------------------------------+----------------------+----------------------+
+        | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+        | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+        |===============================+======================+======================|
+        |   0  GeForce RTX 2080    Off  | 00000000:09:00.0 Off |                  N/A |
+        | 27%   34C    P8    17W / 225W |      1MiB /  7982MiB |      0%      Default |
+        +-------------------------------+----------------------+----------------------+
+        |   1  GeForce RTX 2080    Off  | 00000000:42:00.0  On |                  N/A |
+        | 27%   35C    P8     4W / 225W |    256MiB /  7979MiB |      0%      Default |
+        +-------------------------------+----------------------+----------------------+
+                                                                                       
+        +-----------------------------------------------------------------------------+
+        | Processes:                                                       GPU Memory |
+        |  GPU       PID   Type   Process name                             Usage      |
+        |=============================================================================|
+
+
+
+## 启动 TensorFlow Docker 容器
+    docker run [-it] [--rm] [-p hostPort:containerPort] tensorflow/tensorflow[:tag] [command]
+
+## 将 TensorFlow 版本映像下载到docker(tensorflow/tensorflow:latest-py3-jupyter)
+    docker pull tensorflow/tensorflow:latest-gpu-jupyter
+
+## 下载并运行支持 GPU 的 TensorFlow 映像
+    nvidia-docker run --runtime=nvidia -it --rm tensorflow/tensorflow:latest-gpu \
+       python -c "import tensorflow as tf; tf.enable_eager_execution(); print(tf.reduce_sum(tf.random_normal([1000, 1000])))"
+
+##  TensorFlow 启动 Jupyter ntebook
+    nvidia-docker run -it -p 8888:8888 tensorflow/tensorflow:nightly-py3-jupyter
+
+## TensorFlow GPU 映像在容器中启动 bash shell 会话
+    nvidia-docker run --runtime=nvidia -it tensorflow/tensorflow:latest-gpu bash
+
+## 要在容器内运行在主机上开发的 TensorFlow 程序，装载主机目录并更改容器的工作目录(-v hostDir:containerDir -w workDir)
+    nvidia-docker run -it --rm -v $PWD:/tmp -w /tmp tensorflow/tensorflow python ./script.py
+
+# test
+    nvidia-docker run -it --rm -v /home/ypl/NLP_workspace/sentiment_projects/keras_bert_classification:/tmp -w /tmp tensorflow/tensorflow:latest-gpu-py3-jupyter python ./bert_fc.py
+
+## docker cp
+    docker cp /home/ypl/NLP_workspace/sentiment_projects/keras_bert_classification/bert/extract_feature.py 6badaf98272c:/code/bert/extract_feature.py
+
+## docker exec
+    docker exec -it containerID bash

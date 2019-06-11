@@ -1,0 +1,14 @@
+[
+		{		
+			"moduel_name":"simple_sentiment_analysis_main",
+			"active_words":"",
+			"negative_words":"",
+			"neutral_words":"",
+			"emotion_polarity":"neu",
+			"political_words":"",
+            "school_words":"",
+            "score": 0.777,
+            "related_school":0,
+            "remarks":""
+		}
+]

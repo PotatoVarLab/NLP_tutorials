@@ -1,0 +1,109 @@
+# 启动tensorflow server
+tensorflow_model_server --model_base_path=/home/ypl/NLP_workspace/keras-and-tensorflow-serving/my_image_classifier --rest_api_port=9000 --model_name=ImageClassifier
+
+
+tensorflow_model_server --model_base_path=/home/ypl/NLP_workspace/sentiment_projects/bert_2clf_sentiment/data/exported --rest_api_port=9000 --model_name=ImageClassifier
+
+tensorflow_model_server --model_base_path=/home/ypl/NLP_workspace/sentiment_projects/bert_sentiment_analysis/data/exported --rest_api_port=9000 --model_name=bert_sentiment_clf
+
+
+# saved_model_cli
+saved_model_cli show --all --dir /home/ypl/NLP_workspace/sentiment_projects/bert_sentiment_analysis/data/exported/1559030037/
+
+MetaGraphDef with tag-set: 'serve' contains the following SignatureDefs:
+
+signature_def['serving_default']:
+  The given SavedModel SignatureDef contains the following input(s):
+    inputs['input_ids'] tensor_info:
+        dtype: DT_INT32
+        shape: (-1, 128)
+        name: input_ids_1:0
+    inputs['input_mask'] tensor_info:
+        dtype: DT_INT32
+        shape: (-1, 128)
+        name: input_mask_1:0
+    inputs['label_ids'] tensor_info:
+        dtype: DT_INT32
+        shape: (-1)
+        name: label_ids_1:0
+    inputs['segment_ids'] tensor_info:
+        dtype: DT_INT32
+        shape: (-1, 128)
+        name: segment_ids_1:0
+  The given SavedModel SignatureDef contains the following output(s):
+    outputs['probabilities'] tensor_info:
+        dtype: DT_FLOAT
+        shape: (-1, 3)
+        name: loss/Softmax:0
+  Method name is: tensorflow/serving/predict
+
+##
+saved_model_cli run --dir /home/ypl/NLP_workspace/sentiment_projects/keras_bert_hub/output/exported/1559038827/ --tag_set serve --signature_def serving_default --input_examples '[{"input_ids":np.zeros((1,128), dtype=int).tolist(),"input_mask":np.zeros((1,128), dtype=int).tolist(),"segment_ids":np.zeros((1,128), dtype=int).tolist(), "label_ids":[0, 1, 2]}]'
+
+
+saved_model_cli run --dir /home/ypl/NLP_workspace/sentiment_projects/keras_bert_hub/output/exported/1559038827/ --tag_set serve --signature_def serving_default --input_exprs 'input_ids=np.zeros((1,128),dtype=int).tolist();input_mask=np.zeros((1,128), dtype=int).tolist();segment_ids=np.zeros((1,128), dtype=int).tolist();label_ids=[0, 1, 2]'
+
+
+# request BERT tensorflow server
+    1. Need transform the feature -- data preprocessing
+    2. Just POST request
+    3. Response handle
+
+# Flask used to others part
+
+# ab to test Flask
+ab -p post.txt -T application/json -c 100 -n 400 http://10.0.3.55:9090/simple_sentiment
+
+
+# $$ Docker test
+TESTDATA="/home/ypladmin/downloads/serving/tensorflow_serving/servables/tensorflow/testdata"
+
+
+docker run -t --rm -p 8501:8501 \
+    -v "/home/ypladmin/downloads/serving/tensorflow_serving/servables/tensorflow/testdata/saved_model_half_plus_two_cpu:/models/half_plus_two" \
+    -e MODEL_NAME=half_plus_two \
+    tensorflow/serving
+
+
+curl -d '{"instances": [1.0, 2.0, 5.0]}' -X POST http://localhost:8501/v1/models/half_plus_two:predict
+
+
+#### Docker Tensorflow server
+1. save model
+
+2. docker-compolse.yaml
+    ```
+        version: "3"
+
+        services:
+          serving:
+            image: tensorflow/serving:latest
+            restart: unless-stopped
+            ports:
+              - 8500:8500
+              - 8501:8501
+            volumes:
+              - ./model0:/models/MODEL0
+            environment:
+              - MODEL_NAME=MODEL0
+    ```
+    其中， MODLE0 为自定义名称，可按需修改。 但是， MODEL_NAME=* 和 volumes 里的 /models/* ，应该保持一致
+3. docker run 
+    `docker-compose up -d`
+
+4. docker log
+    `docker-compose logs`
+
+5. docker GPU
+
+  nvidia-docker run --runtime=nvidia -it --rm tensorflow/tensorflow:latest-gpu-py3-jupyter \
+       python -c "import tensorflow as tf; tf.enable_eager_execution(); print(tf.reduce_sum(tf.random_normal([1000, 1000])))"
+
+  nvidia-docker run -it --rm -v /home/ypl/NLP_workspace/sentiment_projects/keras_bert_classification:/tmp -w /tmp tensorflow/tensorflow:latest-gpu-py3-jupyter python ./bert_fc.py
+
+  nvidia-docker run -it --rm -v /home/ypl/NLP_workspace/sentiment_projects/keras_bert_classification:/tmp -w /tmp tensorflow/tensorflow:latest-gpu-py3-jupyter python -c 'import keras'
+
+  docker cp 宿主机中要拷贝的文件名及其路径 容器名：要拷贝到容器里面对应的路径
+
+  docker exec -i -t 6badaf98272c pip list
+  
